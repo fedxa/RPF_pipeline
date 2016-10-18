@@ -1,0 +1,7 @@
+{
+    "INDEX": "data/yeast",
+    "GENOME_GFF": "data/yeast.gff",
+    "ADAPTER": "CTGTAGGCACCATCAATAGATCGGAAGAGCACACGTCTGAACTCCAGTCAC",
+    "TRIM_BAD_LIGATION": true,
+    "MANUAL_SHIFTS_FILE": "shifts.csv"
+}

@@ -139,8 +139,14 @@ rule genRandomizedWig:
         bam="bams/{sample}.bam"
     output:
         csv="wigs/{sample,.*\.randomized}.csv",
-        plusbg="wigs/{sample}.plus.bedgraph.gz",
-        minusbg="wigs/{sample}.minus.bedgraph.gz"
+        pluscbg="wigs/{sample}.count.plus.bw",
+        minuscbg="wigs/{sample}.count.minus.bw",
+        pluscw="wigs/{sample}.count.plus.wig",
+        minuscw="wigs/{sample}.count.minus.wig",
+        plusbg="wigs/{sample}.plus.bw",
+        minusbg="wigs/{sample}.minus.bw",
+        plusw="wigs/{sample}.plus.wig",
+        minusw="wigs/{sample}.minus.wig"
     params:
         multihit=True
     script:

@@ -1,9 +1,28 @@
 Ribosome footprinting pipeline
 ==============================
 
-This is a simple
-[Snakemake](https://bitbucket.org/snakemake/snakemake/wiki/Home) based
-implementation of a Ribosome profiling pipeline
+This is a simple [Snakemake][] based implementation of a Ribosome
+profiling pipeline
+
+
+Installation
+------------
+
+### Requirements
+
+- R > 3.3.1
+  + GenomicAlignments
+  + GenomicFeatures
+  + RiboProfiling
+  + rtracklayer
+- tophat
+- bowtie
+- FastX
+- samtools
+
+Run
+---
+
 
 Configuration
 -------------
@@ -26,9 +45,10 @@ The entries mean:
   * *ADAPTER* Adapter to strip of the end of the sequence
   * *TRIM_BAD_LIGATIOIN* whether to drop on nucleotide at the 5' end
     of the sequence.  It is someties erroneous. (_TODO_: add plot checking for it)
-  * *MANUAL_SHIFTS_FILE* Nam of the csv with the manual selection of
+  * *MANUAL_SHIFTS_FILE* Name of the csv with the manual selection of
     the reads and position of the P-sites. See P-site WIGs
 	
+
 P-site WIG generation
 ---------------------
 
@@ -52,3 +72,36 @@ separated), and shift list. the pipeline creates the CSV files with
 the values it found automatically in `wigs/{sample}.shifts.csv`, which
 can be used as the template to create the *MANUAL_SHIFTS_FILE*.
 
+
+Notes on linkers/adapters in Ribosome Footprinting
+--------------------------------------------------
+
+### Detailed sequence breakout for Ribosome footprint library
+
+                                                                                          / This one (rApp) seems to not be present!
+    AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCTATGCATGCATGCATGCATGCATGCATGCaCTGTAGGCACCATCAATAGATCGGAAGAGCACACGTCTGAACTCCAGTCACTGACCAATCTCGTATGCCGTCTTCTGCTTG
+                                                              ^^^^Sequence^^^^^^^^^^^^^^^^-CTGTAGGCACCATCAATAGATCGGAAGAGC                     TGACCA
+    AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT                                               GATCGGAAGAGCACACGTCTGAACTCCAGTCACNNNNNNATCTCGTATGCCGTCTTCTGCTTG
+    TruSeq Universal Adapter                                                                                 TruSeq Indexed Adapter           Index
+    AATGATACGGCGACCACCGA
+    Portion bind to flow cell
+                                                                                                                                                        CGTATGCCGTCTTCTGCTTG
+                                                                                                                                                        Binds to flow cell for paired end reads
+                                                                                                             GATCGGAAGAGCACACGTCTGAACTCCAGTCAC -> Index read proceeds
+                                                                                                             Index read primer
+                             ACACTCTTTCCCTACACGACGCTCTTCCGATCT -> Read proceeds
+                             Read 1 primer
+
+### Linkers (some references)
+
+1. [Adapter](http://onlinelibrary.wiley.com/doi/10.1002/wrna.1172/pdf)
+
+   `5'rAppCTGTAGGCACCATCAAT/3ddC/3'`
+
+2. [cloning linkers](https://eu.idtdna.com/pages/landing/cloning-linkers)
+
+	`AATGATACGGCGACCACCGAGATCTACAC`  
+	`CAAGCAGAAGACGGCATACGAGATTGGTCAGTGACTGGAGTTCAGACGTGTGCTCTTCCG`: IDX4
+
+
+[Snakemake]: https://bitbucket.org/snakemake/snakemake/wiki/Home

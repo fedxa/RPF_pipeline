@@ -18,8 +18,12 @@ def get_fastq_ext(sample):
 ## Global targets
 rule bams:
     input: expand("bams/{sample}.bam", sample=SAMPLES)
+rule randombams:
+    input: expand("bams/{sample}.randomized.bam", sample=SAMPLES)
 rule csv:
     input: expand("wigs/{sample}.csv", sample=SAMPLES)
+rule randomcsv:
+    input: expand("wigs/{sample}.randomized.csv", sample=SAMPLES)
 
 
 ## Utility rules: generating indices
@@ -106,17 +110,44 @@ rule fix_tophat_output:
     shell:
         "{SCRIPTDIR}/fix_tophat_XS_tags.sh {input} > {output}"
 
+rule randomize_double_hits:
+    input:
+        "{sample}.bam"
+    output:
+        "{sample}.randomized.bam"
+    shell:
+        "{SCRIPTDIR}/randomizeDoubleHits.sh {input} {output}"
+
 rule genWig:
     input:
-        bam="bams/{sample}.bam",
-        config="config.json",
+        bam="bams/{sample}.bam"
     output:
         csv="wigs/{sample}.csv",
-        plusbg="wigs/{sample}.plus.bedgraph.gz",
-        minusbg="wigs/{sample}.minus.bedgraph.gz"
+        pluscbg="wigs/{sample}.count.plus.bw",
+        minuscbg="wigs/{sample}.count.minus.bw",
+        pluscw="wigs/{sample}.count.plus.wig",
+        minuscw="wigs/{sample}.count.minus.wig",
+        plusbg="wigs/{sample}.plus.bw",
+        minusbg="wigs/{sample}.minus.bw",
+        plusw="wigs/{sample}.plus.wig",
+        minusw="wigs/{sample}.minus.wig"
     script:
         "scripts/BamToBedGraph.R"
 
+rule genRandomizedWig:
+    input:
+        bam="bams/{sample}.bam"
+    output:
+        csv="wigs/{sample,.*\.randomized}.csv",
+        plusbg="wigs/{sample}.plus.bedgraph.gz",
+        minusbg="wigs/{sample}.minus.bedgraph.gz"
+    params:
+        multihit=True
+    script:
+        "scripts/BamToBedGraph.R"
+
+ruleorder: genRandomizedWig > genWig
+        
 rule bedGraphToBigWig:
     input:
         bg="{file}.bedgraph.gz",

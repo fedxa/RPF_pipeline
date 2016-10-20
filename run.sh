@@ -12,7 +12,8 @@ module add UHTS/Aligner/tophat/2.0.13
 module add UHTS/Analysis/samtools/1.3
 module add UHTS/Quality_control/fastqc/0.11.2
 module add UHTS/Analysis/fastx_toolkit/0.0.13.2
-module add R/3.2.2
+# R/3.3.1 needed -- installed locally
+# module add R/3.2.2
 
 
 snakemake --cluster-config $CLUSTER \

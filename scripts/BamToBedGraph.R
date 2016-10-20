@@ -92,22 +92,62 @@ genShiftedRanges <- function(aln, lens, shifts) {
 ##     c(rep(wp,score(wp)),rep(wm,score(wm)))
 ## }
 
-genWigs <- function(asites, wigbase) {
+
+genWigs <- function(asites, wigbase, seqinfo=NULL) {
     pluscov <- coverage(asites[strand(asites)=='+'])
-    export.bedGraph(pluscov, paste0(wigbase,".plus.bedgraph"))
-    system(paste("bgzip -f", paste0(wigbase,".plus.bedgraph")))
-    ## system(paste("~/Bio/userApps/bin/bedGraphToBigWig",
-    ##              paste0(wigbase,".plus.bedgraph"),
-    ##              "~/net/frt2/data/hg19/hg19.fa.fai",
-    ##              paste0(wigbase,".plus.bw")))
+    ## export.bedGraph(pluscov, paste0(wigbase,".count.plus.bedgraph"))
+    ## export.bw(pluscov, paste0(wigbase,".count.plus.bw"))
+    ## This one drops zero from the output
+    gr <- GRanges(pluscov)
+    export.bw(gr[score(gr)!=0], paste0(wigbase,".count.plus.bw"))
 
     minuscov <- coverage(asites[strand(asites)=='-'])
-    export.bedGraph(minuscov, paste0(wigbase,".minus.bedgraph"))
-    system(paste("bgzip -f", paste0(wigbase,".minus.bedgraph")))
-    ## system(paste("~/Bio/userApps/bin/bedGraphToBigWig",
-    ##              paste0(wigbase,".minus.bedgraph"),
-    ##              "~/net/frt2/data/hg19/hg19.fa.fai",
-    ##              paste0(wigbase,".minus.bw")))
+    ## export.bedGraph(minuscov, paste0(wigbase,".count.minus.bedgraph"))
+    ## export.bw(minuscov, paste0(wigbase,".count.minus.bw"))
+    gr <- GRanges(minuscov)
+    export.bw(gr[score(gr)!=0], paste0(wigbase,".count.minus.bw"))
+
+    if (!is.null(seqinfo)) {
+        ## Oh, saving as a wig is uncomfortable, really.
+        gp <- GPos(seqinfo)
+        mcols(gp) <- unlist(pluscov)
+        gp <- gp[mcols(gp)[[1]]!=0]
+        score(gp) <- as.integer(mcols(gp)[[1]])
+        export.wig(gp, paste0(wigbase,".count.plus.wig"))
+
+        gp <- GPos(seqinfo)
+        mcols(gp) <- unlist(minuscov)
+        gp <- gp[mcols(gp)[[1]]!=0]
+        score(gp) <- as.integer(mcols(gp)[[1]])
+        export.wig(gp, paste0(wigbase,".count.minus.wig"))
+    }
+
+    ## Normalize
+    totmapped <- sum(sum(pluscov))+sum(sum(minuscov))
+    pluscov <- pluscov/totmapped*1e6
+    minuscov <- minuscov/totmapped*1e6
+    
+    gr <- GRanges(pluscov)
+    export.bw(gr[score(gr)!=0], paste0(wigbase,".plus.bw"))
+
+    gr <- GRanges(minuscov)
+    export.bw(gr[score(gr)!=0], paste0(wigbase,".minus.bw"))
+
+    if (!is.null(seqinfo)) {
+        ## Oh, saving as a wig is uncomfortable, really.
+        gp <- GPos(seqinfo)
+        mcols(gp) <- unlist(pluscov)
+        gp <- gp[mcols(gp)[[1]]!=0]
+        score(gp) <- as.numeric(mcols(gp)[[1]])
+        export.wig(gp, paste0(wigbase,".plus.wig"))
+
+        gp <- GPos(seqinfo)
+        mcols(gp) <- unlist(minuscov)
+        gp <- gp[mcols(gp)[[1]]!=0]
+        score(gp) <- as.numeric(mcols(gp)[[1]])
+        export.wig(gp, paste0(wigbase,".minus.wig"))
+    }
+
 }
 
 
@@ -130,12 +170,22 @@ genResultTable <- function(se=secds, stripencode=TRUE) {
 
 
 
-doAllSample <- function(bam, base, txdb, lens=NULL, shifts=NULL, plot=TRUE) {
-    shitScanBamParam <- ScanBamParam(what=c("flag","strand","pos","qwidth","cigar"),
-                                     flag=scanBamFlag(isUnmappedQuery=F),
-                                     tagFilter=list(NH=1))
+mhitScanBamParam <- ScanBamParam(what=c("flag","strand","pos","qwidth","cigar"),
+                                 flag=scanBamFlag(isUnmappedQuery=F)) # ,tag=c("NH")
+shitScanBamParam <- ScanBamParam(what=c("flag","strand","pos","qwidth","cigar"),
+                                 flag=scanBamFlag(isUnmappedQuery=F),
+                                 tagFilter=list(NH=1))
+
+doAllSample <- function(bam, base, txdb, lens=NULL, shifts=NULL, plot=TRUE, multihit=FALSE) {
+    if (is.null(multihit) || !multihit) {
+        message("Using only single hits")
+        sbp <- shitScanBamParam
+    } else {
+        message("Using single and multiple hits (randomized hack)")
+        sbp <- mhitScanBamParam
+    }
     message("Reading ", bam)
-    aln <- readGAlignments(BamFile(bam), param=shitScanBamParam)
+    aln <- readGAlignments(BamFile(bam), param=sbp)
     message("Counting lengths")
     pp <- plotLengthDistribution(aln, lens, base, save=TRUE, plot=plot)
     if (is.null(lens)) {
@@ -162,7 +212,7 @@ doAllSample <- function(bam, base, txdb, lens=NULL, shifts=NULL, plot=TRUE) {
         print(rr2[2])
     ggbio::ggsave(paste0(base,"_shiftedCheck.pdf"), rr2[[2]])
     message("Generating wigs")
-    genWigs(asites, base)
+    genWigs(asites, base, seqinfo(aln))
     cds <- cdsBy(txdb, by="gene")
     message("Counting RPKMS")
     secds <- summarizeOverlaps(features=cds, reads=asites, mode="Union")
@@ -188,8 +238,9 @@ if (exists("snakemake")) {
     })
     ## lens <- snakemake@config[["RETAINED_READ_LENGTHS"]]
     ## shifts <- snakemake@config[["RETAINED_READ_ASITE_OFFSETS"]]
-    
+
     base <- file.path("wigs", snakemake@wildcards$sample)
-    res <- doAllSample(snakemake@input$bam, base, txdb, lens=lens, shifts=shifts, plot=FALSE)
+    res <- doAllSample(snakemake@input$bam, base, txdb, lens=lens, shifts=shifts,
+                       multihit=snakemake@params[["multihit"]], plot=FALSE)
     write.csv(res, paste0(base,".csv"), row.names=FALSE)
 }

@@ -16,14 +16,22 @@ def get_fastq_ext(sample):
 
 
 ## Global targets
-rule bams:
-    input: expand("bams/{sample}.bam", sample=SAMPLES)
-rule randombams:
-    input: expand("bams/{sample}.randomized.bam", sample=SAMPLES)
 rule csv:
-    input: expand("wigs/{sample}.csv", sample=SAMPLES)
+    input: expand("wigs/{sample}.stripped.trimmed.nonribo.csv", sample=SAMPLES)
+rule bams:
+    input: expand("bams/{sample}.stripped.trimmed.nonribo.bam", sample=SAMPLES)
 rule randomcsv:
-    input: expand("wigs/{sample}.randomized.csv", sample=SAMPLES)
+    input: expand("wigs/{sample}.stripped.trimmed.nonribo.random.csv", sample=SAMPLES)
+rule randombams:
+    input: expand("bams/{sample}.stripped.trimmed.nonribo.random.bam", sample=SAMPLES)
+rule bamsnf:
+    input: expand("bams/{sample}.stripped.trimmed.bam", sample=SAMPLES)
+rule randombamsnf:
+    input: expand("bams/{sample}.stripped.trimmed.random.bam", sample=SAMPLES)
+rule csvnf:
+    input: expand("wigs/{sample}.stripped.trimmed.csv", sample=SAMPLES)
+rule randomcsvnf:
+    input: expand("wigs/{sample}.stripped.trimmed.random.csv", sample=SAMPLES)
 
 
 ## Utility rules: generating indices
@@ -75,17 +83,24 @@ rule trim_bad_ligation:
     shell:
         "zcat {input} | fastx_trimmer -Q33 -f 2 | gzip > {output}"
 
-def sample_trimmed_or_not(wildcards):
-    "Return the trimmed or untrimmed FASTQ file name depending in TRIM_BAD_LIGATION config"
-    if config["TRIM_BAD_LIGATION"]:
-        return "cleaned/{sample}.stripped.trimmed.fastq.gz".format(sample=wildcards.sample)
-    else:
-        return "cleaned/{sample}.stripped.fastq.gz".format(sample=wildcards.sample)
+
+rule filter_ribosomal:
+    input:
+        fastq="cleaned/{sample}.fastq.gz",
+        indexnc=config["INDEX_NC"]+".1.ebwt"
+    output:
+        "cleaned/{sample}.nonribo.fastq.gz"
+    threads: 8
+    shell:
+    	"zcat {input.fastq} |"
+	" bowtie -q -S -p $(( {threads}>1?{threads}-1:1 )) -v3 --seedlen=23 {config[INDEX_NC]} - |"
+	" samtools  view -h -f4 - | samtools bam2fq - | gzip > {output}"
+
 
 ## I forgot, why I used fr-secondstrand
-rule tophat_unfiltered:
+rule tophat:
     input:
-        fastq=sample_trimmed_or_not,
+        fastq="cleaned/{sample}.fastq.gz",
         index=config["INDEX"]+".1.ebwt",
         index_tr=TRANSCRIPTOME_INDEX+".1.ebwt"
     output:
@@ -98,6 +113,7 @@ rule tophat_unfiltered:
 	" --transcriptome-index={TRANSCRIPTOME_INDEX} --no-novel-juncs"
 	" --library-type fr-secondstrand"
         " -o {output.dir} {config[INDEX]} {input.fastq}"
+
 
 ## Fix them form the strand in the alignment flag
 ## https://genomebytes.wordpress.com/2013/07/08/fixing-the-xs-tag-in-tophat-output-bug-fixing/        
@@ -114,7 +130,7 @@ rule randomize_double_hits:
     input:
         "{sample}.bam"
     output:
-        "{sample}.randomized.bam"
+        "{sample}.random.bam"
     shell:
         "{SCRIPTDIR}/randomizeDoubleHits.sh {input} {output}"
 
@@ -138,7 +154,7 @@ rule genRandomizedWig:
     input:
         bam="bams/{sample}.bam"
     output:
-        csv="wigs/{sample,.*\.randomized}.csv",
+        csv="wigs/{sample,.*\.random}.csv",
         pluscbg="wigs/{sample}.count.plus.bw",
         minuscbg="wigs/{sample}.count.minus.bw",
         pluscw="wigs/{sample}.count.plus.wig",
@@ -153,12 +169,3 @@ rule genRandomizedWig:
         "scripts/BamToBedGraph.R"
 
 ruleorder: genRandomizedWig > genWig
-        
-rule bedGraphToBigWig:
-    input:
-        bg="{file}.bedgraph.gz",
-        fai=config["INDEX"]+".fa.fai"
-    output:
-        "{file}.bw"
-    shell:
-        "bedGraphToBigWig {input.bg} {input.fai} {output}"

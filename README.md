@@ -33,7 +33,6 @@ The configuration is in the file `config.json` which looks like
     "INDEX": "data/yeast",
     "GENOME_GFF": "data/yeast.gff",
     "ADAPTER": "CTGTAGGCACCATCAATAGATCGGAAGAGCACACGTCTGAACTCCAGTCAC",
-    "TRIM_BAD_LIGATION": true,
     "MANUAL_SHIFTS_FILE": "shifts.csv"
     }
 
@@ -43,8 +42,6 @@ The entries mean:
     In the example above the reference should be named `data/yeast.fa`
   * *GENOME_GFF* name of the genome annotation in gff format
   * *ADAPTER* Adapter to strip of the end of the sequence
-  * *TRIM_BAD_LIGATIOIN* whether to drop on nucleotide at the 5' end
-    of the sequence.  It is someties erroneous. (_TODO_: add plot checking for it)
   * *MANUAL_SHIFTS_FILE* Name of the csv with the manual selection of
     the reads and position of the P-sites. See P-site WIGs
 	

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Starts cutadapt on cluster
+# Starts cutadapt on cluster in parallel
 
 module add UHTS/Quality_control/cutadapt/1.8
 
@@ -7,7 +7,7 @@ if [ $# -lt 4 ]; then
     echo "Usage: $0 in_1.fastq in_2.fastq out_1.fatsq out_2.fastq [cutadapt-options]"
     echo ' Runs cutadapter on LSB cluster guessing properly number of cores/nodes'
     echo ' All files can be fastq, fastq.gz, fastq.bz2, fastq.xz (all should have the same type'
-    echo ' cutadapt-optiosn are various options (i.e. -a ADAPTER) transered to cutadapt without change'
+    echo ' cutadapt-options are various options (i.e. -a ADAPTER) transered to cutadapt without change'
     echo ' (use cutadapt --help to see the list)'
     echo ' Number of processes is deduced automatically under bsub, or taken from environment NCHUNKS'
     echo ' Use empty files "" for the second pair for single end mode'

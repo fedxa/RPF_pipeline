@@ -83,14 +83,15 @@ genShiftedRanges <- function(aln, lens, shifts) {
 
 
 ## Reads WIG pair representing read counts at a given site
-##  Note: the resulting GRangeList may have erroneous score field
-## readWigsWithCounts <- function(plus,minus) {
-##     wp <- import.wig(plus)
-##     strand(wp) <- '+'
-##     wm <- import.wig(minus)
-##     strand(wm) <- '-'
-##     c(rep(wp,score(wp)),rep(wm,score(wm)))
-## }
+readWigsWithCounts <- function(plus,minus) {
+    wp <- import(plus)
+    strand(wp) <- '+'
+    wm <- import(minus)
+    strand(wm) <- '-'
+    res <- c(rep(wp,score(wp)),rep(wm,score(wm)))
+    score(res) <- NULL
+    res
+}
 
 
 genWigs <- function(asites, wigbase, seqinfo=NULL) {

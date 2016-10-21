@@ -1,3 +1,10 @@
+### Setup the nice environment if we are running as a Snakemake script
+if (exists("snakemake")) {
+    ## save.image("debug.RData")
+    options(device=pdf)
+    message <- function(...) { cat(...) } ## Fix partially the crazy rpy2 warnings
+}
+
 library(GenomicAlignments)
 library(GenomicFeatures)
 library(rtracklayer)
@@ -62,6 +69,20 @@ plotASiteShifts <- function(aln, lens, txdb) {
     list(-as.integer(shifts[c(-1)]),
          plot)
 }
+
+
+fixNegativeShifts <- function(shifts) {
+    ns <- shifts<0
+    res <- shifts
+    if ( length(shifts[!ns])>0 )
+        res[ns] <- round(mean(shifts[!ns]))
+    else
+        res[ns] <- 0
+    if (any(ns))
+        message("Fixed shifts from ",toString(shifts)," to ",toString(res))
+    res
+}
+
 
 genShiftedRanges <- function(aln, lens, shifts) {
     ## Shifting properly  -- get information from the previous plot!
@@ -200,7 +221,7 @@ doAllSample <- function(bam, base, txdb, lens=NULL, shifts=NULL, plot=TRUE, mult
         print(rr[2])
     ggbio::ggsave(paste0(base,"_Asiteshifts.pdf"), rr[[2]])
     if (is.null(shifts))
-        shifts <- rr[[1]]
+        shifts <- fixNegativeShifts(rr[[1]])
     write.csv(data.frame(bam=bam,
                          lens=paste(lens,collapse=" "),
                          shifts=paste(shifts,collapse=" ")),
@@ -223,9 +244,6 @@ doAllSample <- function(bam, base, txdb, lens=NULL, shifts=NULL, plot=TRUE, mult
 
 ## Run the script from snakemake
 if (exists("snakemake")) {
-    ## save.image("debug.RData")
-    options(device=pdf)
-    message <- function(...) { cat(...) } ## Fix partially the crazy rpy2 warnings
     txdb <- makeTxDbFromGFF(snakemake@config[["GENOME_GFF"]])
 
     bam <- snakemake@input$bam

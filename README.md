@@ -10,6 +10,7 @@ Installation
 
 ### Requirements
 
+- snakemake 3.7.1 (3.8.0 is bad, later maybe ok)
 - R > 3.3.1
   + GenomicAlignments
   + GenomicFeatures

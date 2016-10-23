@@ -1,8 +1,8 @@
 Ribosome footprinting pipeline
 ==============================
 
-This is a simple [Snakemake][] based implementation of a Ribosome
-profiling pipeline
+This is a simple [![Snakemake](https://img.shields.io/badge/snakemake-≥3.7.1-brightgreen.svg?style=flat-square)](http://snakemake.bitbucket.org)
+based implementation of a Ribosome profiling pipeline
 
 
 Installation
@@ -11,7 +11,7 @@ Installation
 ### Requirements
 
 - snakemake 3.7.1 (3.8.0 is bad, later maybe ok)
-- R > 3.3.1
+- R > 3.3.1  (In older version wig generation does not work)
   + GenomicAlignments
   + GenomicFeatures
   + RiboProfiling
@@ -20,10 +20,47 @@ Installation
 - bowtie
 - FastX
 - samtools
+- cutadapt
 
 Run
 ---
 
+The pipeline is used as
+
+    snakemake [options] [target]
+	
+The possible targets are:
+
+  * *bams* Generate BAM files with prefiltering of the ribosomal fragments
+  * *bamsnf* without prefiltering
+  * *randomizedbams* Generates BAMS where reads with double mapping
+    are randomly selected.  Be careful, it is a bit of a hack.
+  * *csv* Generate WIGS, bigWigs, CSV with counts per gene (bams are,
+    of course, also generated)
+	
+Run `snakemake --lt` to see all possible target rules, or look into `Snakefile` for details.
+
+The suggested way to run is something like
+
+    snakemake -np csv
+
+To check what is it going to do, and then start as
+
+    snakemake -p csv
+	
+`run.sh` contains an example setup to run on a LSF based cluster.
+
+Input files
+-----------
+
+The samples in FASTQ format (preferrably compressed with gzip, bzip,
+or xz) should be in `input` directory.
+
+`data` should contain `yast.fa` with the reference genome FASTA,
+`yeast.gff` with the gene annotations, and
+`Yeast-Noncoding-extended.fa` with the ribosomal RNA contaminating
+sequences to filter at the first stage.  See next section on the
+naming for these files.
 
 Configuration
 -------------
@@ -32,6 +69,7 @@ The configuration is in the file `config.json` which looks like
 
     {
     "INDEX": "data/yeast",
+    "INDEX_NC": "data/Yeast-Noncoding-extended",
     "GENOME_GFF": "data/yeast.gff",
     "ADAPTER": "CTGTAGGCACCATCAATAGATCGGAAGAGCACACGTCTGAACTCCAGTCAC",
     "MANUAL_SHIFTS_FILE": "shifts.csv"
@@ -102,4 +140,3 @@ Notes on linkers/adapters in Ribosome Footprinting
 	`CAAGCAGAAGACGGCATACGAGATTGGTCAGTGACTGGAGTTCAGACGTGTGCTCTTCCG`: IDX4
 
 
-[Snakemake]: https://bitbucket.org/snakemake/snakemake/wiki/Home

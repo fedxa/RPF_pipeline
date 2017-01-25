@@ -1,7 +1,7 @@
 {
-    "INDEX": "data/yeast",
-    "INDEX_NC": "data/Yeast-Noncoding-extended",
-    "GENOME_GFF": "data/yeast.gff",
+    "INDEX": "/data2/unige/dmg/fbezruko/data/hg19/hg19",
+    "INDEX_NC": "data/rrna",
+    "GENOME_GFF": "/data2/unige/dmg/fbezruko/data/hg19/gencode.v15.annotation.gtf",
     "ADAPTER": "CTGTAGGCACCATCAATAGATCGGAAGAGCACACGTCTGAACTCCAGTCAC",
     "MANUAL_SHIFTS_FILE": "shifts.csv"
 }

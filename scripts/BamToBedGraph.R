@@ -1,9 +1,12 @@
 ### Setup the nice environment if we are running as a Snakemake script
+args <- commandArgs(trailingOnly=TRUE)
 if (exists("snakemake")) {
     ## save.image("debug.RData")
     options(device=pdf)
     message <- function(...) { cat(...) } ## Fix partially the crazy rpy2 warnings
-}
+} else if (length(args)>0) { ## we are in a script
+    options(device=pdf)
+}    
 
 library(GenomicAlignments)
 library(GenomicFeatures)
@@ -129,20 +132,20 @@ genWigs <- function(asites, wigbase, seqinfo=NULL) {
     gr <- GRanges(minuscov)
     export.bw(gr[score(gr)!=0], paste0(wigbase,".count.minus.bw"))
 
-    if (!is.null(seqinfo)) {
-        ## Oh, saving as a wig is uncomfortable, really.
-        gp <- GPos(seqinfo)
-        mcols(gp) <- unlist(pluscov)
-        gp <- gp[mcols(gp)[[1]]!=0]
-        score(gp) <- as.integer(mcols(gp)[[1]])
-        export.wig(gp, paste0(wigbase,".count.plus.wig"))
+    ## if (!is.null(seqinfo)) {
+    ##     ## Oh, saving as a wig is uncomfortable, really.
+    ##     gp <- GPos(seqinfo)
+    ##     mcols(gp) <- unlist(pluscov)
+    ##     gp <- gp[mcols(gp)[[1]]!=0]
+    ##     score(gp) <- as.integer(mcols(gp)[[1]])
+    ##     export.wig(gp, paste0(wigbase,".count.plus.wig"))
 
-        gp <- GPos(seqinfo)
-        mcols(gp) <- unlist(minuscov)
-        gp <- gp[mcols(gp)[[1]]!=0]
-        score(gp) <- as.integer(mcols(gp)[[1]])
-        export.wig(gp, paste0(wigbase,".count.minus.wig"))
-    }
+    ##     gp <- GPos(seqinfo)
+    ##     mcols(gp) <- unlist(minuscov)
+    ##     gp <- gp[mcols(gp)[[1]]!=0]
+    ##     score(gp) <- as.integer(mcols(gp)[[1]])
+    ##     export.wig(gp, paste0(wigbase,".count.minus.wig"))
+    ## }
 
     ## Normalize
     totmapped <- sum(sum(pluscov))+sum(sum(minuscov))
@@ -155,20 +158,20 @@ genWigs <- function(asites, wigbase, seqinfo=NULL) {
     gr <- GRanges(minuscov)
     export.bw(gr[score(gr)!=0], paste0(wigbase,".minus.bw"))
 
-    if (!is.null(seqinfo)) {
-        ## Oh, saving as a wig is uncomfortable, really.
-        gp <- GPos(seqinfo)
-        mcols(gp) <- unlist(pluscov)
-        gp <- gp[mcols(gp)[[1]]!=0]
-        score(gp) <- as.numeric(mcols(gp)[[1]])
-        export.wig(gp, paste0(wigbase,".plus.wig"))
+    ## if (!is.null(seqinfo)) {
+    ##     ## Oh, saving as a wig is uncomfortable, really.
+    ##     gp <- GPos(seqinfo)
+    ##     mcols(gp) <- unlist(pluscov)
+    ##     gp <- gp[mcols(gp)[[1]]!=0]
+    ##     score(gp) <- as.numeric(mcols(gp)[[1]])
+    ##     export.wig(gp, paste0(wigbase,".plus.wig"))
 
-        gp <- GPos(seqinfo)
-        mcols(gp) <- unlist(minuscov)
-        gp <- gp[mcols(gp)[[1]]!=0]
-        score(gp) <- as.numeric(mcols(gp)[[1]])
-        export.wig(gp, paste0(wigbase,".minus.wig"))
-    }
+    ##     gp <- GPos(seqinfo)
+    ##     mcols(gp) <- unlist(minuscov)
+    ##     gp <- gp[mcols(gp)[[1]]!=0]
+    ##     score(gp) <- as.numeric(mcols(gp)[[1]])
+    ##     export.wig(gp, paste0(wigbase,".minus.wig"))
+    ## }
 
 }
 
@@ -183,9 +186,10 @@ stripEncodeVersion <- function(namelist, stripencode=TRUE) {
 
 
 genResultTable <- function(se=secds, stripencode=TRUE) {
+    ## Reduce is used here to prevent the sum from being the sum of alternative transcripts
     m <- data.frame(name=stripEncodeVersion(rownames(se),stripencode),
                     fullname=rownames(se),
-                    cdslen=sum(width(rowRanges(se))), assay(se))
+                    cdslen=sum(width(reduce(rowRanges(se)))), assay(se))
     m$rpkm <- m$reads / (sum(m$reads)/1e6) / (m$cdslen/1000)
     return(m)
 }
@@ -242,24 +246,37 @@ doAllSample <- function(bam, base, txdb, lens=NULL, shifts=NULL, plot=TRUE, mult
 }
 
 
-## Run the script from snakemake
-if (exists("snakemake")) {
-    txdb <- makeTxDbFromGFF(snakemake@config[["GENOME_GFF"]])
-
-    bam <- snakemake@input$bam
-
+## Run the script from snakemake or Rscript
+doall <- function() {
     lens <- NULL
     shifts <- NULL
     try({
-        df <- read.csv(snakemake@config[["MANUAL_SHIFTS_FILE"]], as.is=TRUE);
+        df <- read.csv(shiftsfile, as.is=TRUE);
         lens <- as.integer(strsplit(df[df$bam==bam, "lens"], " ")[[1]]);
         shifts <- as.integer(strsplit(df[df$bam==bam, "shifts"], " ")[[1]]);
     })
     ## lens <- snakemake@config[["RETAINED_READ_LENGTHS"]]
     ## shifts <- snakemake@config[["RETAINED_READ_ASITE_OFFSETS"]]
 
-    base <- file.path("wigs", snakemake@wildcards$sample)
-    res <- doAllSample(snakemake@input$bam, base, txdb, lens=lens, shifts=shifts,
-                       multihit=snakemake@params[["multihit"]], plot=FALSE)
+    base <- file.path("wigs", sample)
+    res <- doAllSample(bam, base, txdb, lens=lens, shifts=shifts,
+                       multihit=multihit, plot=FALSE)
     write.csv(res, paste0(base,".csv"), row.names=FALSE)
+}
+if (exists("snakemake")) {
+    genomegff <- snakemake@config[["GENOME_GFF"]]
+    bam <- snakemake@input$bam
+    shiftsfile <- snakemake@config[["MANUAL_SHIFTS_FILE"]]
+    sample <- snakemake@wildcards$sample
+    multihit <- snakemake@params[["multihit"]]
+    
+    txdb <- makeTxDbFromGFF(genomegff)
+    doall()
+} else if (length(args)>=2) {
+    bam <- args[1]
+    genomegff <- args[2]
+    sample <- if (is.na(args[3])) sub(".bam$", "", args[2]) else args[3]
+    shiftsfile <- args[4]
+    multihit <- FALSE
+    doall()
 }

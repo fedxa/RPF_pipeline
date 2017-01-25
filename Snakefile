@@ -7,6 +7,10 @@ SCRIPTDIR = os.path.join(os.path.dirname(os.path.abspath(__name__)), "scripts")
 
 ## Getting all samples in input directory and extensions
 SAMPLES,SAMPLESEXT = glob_wildcards("input/{sample}.fastq{cext,|.(gz|bz2|xz)}")
+if len(SAMPLES)==0:
+    SAMPLES,steps = glob_wildcards("bams/{sample,[^.]*}.{steps}.bam")
+    SAMPLES=list(set(SAMPLES))
+
 
 def get_fastq_ext(sample):
     try:
@@ -141,12 +145,12 @@ rule genWig:
         csv="wigs/{sample}.csv",
         pluscbg="wigs/{sample}.count.plus.bw",
         minuscbg="wigs/{sample}.count.minus.bw",
-        pluscw="wigs/{sample}.count.plus.wig",
-        minuscw="wigs/{sample}.count.minus.wig",
+        # pluscw="wigs/{sample}.count.plus.wig",
+        # minuscw="wigs/{sample}.count.minus.wig",
         plusbg="wigs/{sample}.plus.bw",
         minusbg="wigs/{sample}.minus.bw",
-        plusw="wigs/{sample}.plus.wig",
-        minusw="wigs/{sample}.minus.wig"
+        # plusw="wigs/{sample}.plus.wig",
+        # minusw="wigs/{sample}.minus.wig"
     script:
         "scripts/BamToBedGraph.R"
 
@@ -157,12 +161,12 @@ rule genRandomizedWig:
         csv="wigs/{sample,.*\.random}.csv",
         pluscbg="wigs/{sample}.count.plus.bw",
         minuscbg="wigs/{sample}.count.minus.bw",
-        pluscw="wigs/{sample}.count.plus.wig",
-        minuscw="wigs/{sample}.count.minus.wig",
+        # pluscw="wigs/{sample}.count.plus.wig",
+        # minuscw="wigs/{sample}.count.minus.wig",
         plusbg="wigs/{sample}.plus.bw",
         minusbg="wigs/{sample}.minus.bw",
-        plusw="wigs/{sample}.plus.wig",
-        minusw="wigs/{sample}.minus.wig"
+        # plusw="wigs/{sample}.plus.wig",
+        # minusw="wigs/{sample}.minus.wig"
     params:
         multihit=True
     script:

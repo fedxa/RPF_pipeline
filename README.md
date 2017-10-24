@@ -96,10 +96,9 @@ corresponding to the maximum of the length histogram +- one.  The
 histogram with color-marked selected lengths is saved in
 `wig/{sample}_Length.pdf`.  Then, for each of the lenght individually
 the metagene distribution of the starts of the reads relative to the
-start of the nearest OFR is plotted in `wig/{sample}_Asiteshifts.pdf`.
-(_TODO:_ is it A or P sites? recheck the terminology.) Then, the
-corrsponding offset into the read is taken, which leads to the
-resulting bedgraph files.
+start of the nearest OFR is plotted in `wig/{sample}_Asiteshifts.pdf`,
+that is P-site codon.  Then, the corrsponding offset into the read is
+taken, which leads to the resulting bedgraph files.
 
 However, if this fails, it is possible to create the
 *MANUAL_SHIFTS_FILE* with the sete of the read lengths and shifts for
